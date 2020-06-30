@@ -1,0 +1,86 @@
+---
+output: github_document
+---
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(
+  comment = "#>",
+  collapse = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  echo = TRUE
+)
+```
+
+### Prerequisites
+
+- Start your VPN connection
+- Keep your database credentials safe by storing it in an `.Renviron`  file 
+
+```r
+file.edit("~/.Renviron")
+```
+
+and add the following two lines.
+
+```
+kb_user=your_user_name
+kb_pwd=your_password
+```
+
+Restart R.
+
+### Connect to WOS-KB
+
+```{r setup, echo = FALSE}
+require(tidyverse)
+require(RJDBC)
+require(rJava)
+.jinit()
+jdbcDriver <-
+  JDBC(driverClass = "oracle.jdbc.OracleDriver", classPath = "inst/jdbc_driver/ojdbc8.jar")
+jdbcConnection <-
+  dbConnect(
+    jdbcDriver,
+    "jdbc:oracle:thin:@//biblio-p-db01:1521/bibliodb01.fiz.karlsruhe",
+    Sys.getenv("kb_user"),
+    Sys.getenv("kb_pwd")
+  ) 
+```
+
+### Query WOS-KB with SQL
+
+```{sql connection=jdbcConnection}
+SELECT *
+FROM wos_b_2019.items
+WHERE wos_b_2019.items.ut_eid IN ('000389110200022', '000372645900002', '000400754000138')
+```
+
+### Store query results as R object
+
+Using knitr chunk option `output.var`
+
+```{sql, connection=jdbcConnection, output.var="yearly_collections"}
+select
+        wos_b_2019.items.pubyear,
+        wos_b_2019.databasecollection.edition_value,
+        count(distinct(ut_eid)) as pubs                         
+    from
+        wos_b_2019.items                                            
+    inner join
+        wos_b_2019.databasecollection                                                                                          
+            on wos_b_2019.databasecollection.fk_items =  wos_b_2019.items.pk_items    
+    where
+    wos_b_2019.items.pubyear in (
+            2014, 2015, 2016, 2017, 2018                                                   
+        )                                                  
+    group by
+        wos_b_2019.items.pubyear,
+        wos_b_2019.databasecollection.edition_value
+```
+
+
+```{r}
+yearly_collections
+```
+

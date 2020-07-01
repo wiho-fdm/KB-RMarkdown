@@ -1,11 +1,57 @@
 
+### Learning Objectives
+
+You will learn how to:
+
+  - setup a database connection to WoS-KB with R
+  - use SQL statements in R Markdown
+  - assign the results of the SQL query to an R object as a data frame
+  - store results into your KB table space
+
 ### Prerequisites
 
-  - Start your VPN connection
-  - Keep your database credentials safe by storing it in an `.Renviron`
-    file
+#### Required packages and dependencies
 
-<!-- end list -->
+Unfortunately, the KB documentation about how to access the WoS-KB is a
+bit outdated. Here, we follow the advice from the DZHW Office and
+connect to the WoS-KB using the following packages
+
+``` r
+install.packages(c("RJDBC", "rJava", "DBI"))
+```
+
+In order to connect to the database, you’ll need a database driver.
+You’ll find it here:
+
+<https://github.com/wiho-fdm/KB-RMarkdown/blob/master/inst/jdbc_driver/ojdbc8.jar>
+
+Please download the file `ojdbc8.jar` and put it in the folder
+`inst/jdbc_driver`
+
+*Some users report frustrations with rJava. An alternative approach
+would be using an ODBC driver. Here’s a brief documentation
+<https://db.rstudio.com/databases/oracle/>*
+
+We will also use dplyr for analysis
+
+``` r
+install.packages("dplyr")
+```
+
+and, of course, the `rmarkdown` package.
+
+``` r
+install.packages("rmarkdown")
+```
+
+#### VPN tunnel to FIZ Karlsruhe
+
+Start your VPN connection. Without it, no access to the WoS-KB is
+possible.
+
+#### Database credentials
+
+Keep your database credentials safe by storing it in an `.Renviron` file
 
 ``` r
 file.edit("~/.Renviron")
@@ -19,6 +65,22 @@ and add the following two lines.
 Restart R.
 
 ### Connect to WOS-KB
+
+``` r
+require(dplyr)
+require(RJDBC)
+require(rJava)
+.jinit()
+jdbcDriver <-
+  JDBC(driverClass = "oracle.jdbc.OracleDriver", classPath = "inst/jdbc_driver/ojdbc8.jar")
+jdbcConnection <-
+  dbConnect(
+    jdbcDriver,
+    "jdbc:oracle:thin:@//biblio-p-db01:1521/bibliodb01.fiz.karlsruhe",
+    Sys.getenv("kb_user"),
+    Sys.getenv("kb_pwd")
+  ) 
+```
 
 ### Query WOS-KB with SQL
 
@@ -67,53 +129,58 @@ select
 yearly_collections
 #>    PUBYEAR EDITION_VALUE    PUBS
 #> 1     2018       WOS.SCI 2054149
-#> 2     2016      WOS.ISTP  571407
-#> 3     2018      WOS.ISTP  440967
-#> 4     2018      WOS.BSCI    4039
+#> 2     2018      WOS.ISTP  440967
+#> 3     2016      WOS.ISTP  571407
+#> 4     2018     WOS.ISSHP   21160
 #> 5     2014      WOS.ISTP  515827
-#> 6     2018     WOS.ISSHP   21160
+#> 6     2018      WOS.BSCI    4039
 #> 7     2016      WOS.ESCI  101820
-#> 8     2017       WOS.SCI 2007069
-#> 9     2017      WOS.ISTP  587904
-#> 10    2016       WOS.SCI 1966278
-#> 11    2017      WOS.SSCI  331083
+#> 8     2017      WOS.SSCI  331083
+#> 9     2016       WOS.SCI 1966278
+#> 10    2017      WOS.ISTP  587904
+#> 11    2017       WOS.SCI 2007069
 #> 12    2014      WOS.SSCI  281326
-#> 13    2015       WOS.CCR    8338
-#> 14    2016      WOS.BSCI   16744
-#> 15    2017      WOS.BSCI    6239
+#> 13    2017      WOS.BSCI    6239
+#> 14    2015       WOS.CCR    8338
+#> 15    2016      WOS.BSCI   16744
 #> 16    2018      WOS.SSCI  352397
-#> 17    2015        WOS.IC   20586
-#> 18    2018       WOS.CCR    8627
-#> 19    2014       WOS.CCR    8486
+#> 17    2018       WOS.CCR    8627
+#> 18    2014       WOS.CCR    8486
+#> 19    2015        WOS.IC   20586
 #> 20    2017      WOS.ESCI   66070
-#> 21    2015      WOS.ISTP  532546
+#> 21    2016     WOS.ISSHP   57583
 #> 22    2016        WOS.IC   20772
-#> 23    2016     WOS.ISSHP   57583
-#> 24    2016       WOS.CCR    8619
+#> 23    2016       WOS.CCR    8619
+#> 24    2015      WOS.ISTP  532546
 #> 25    2017      WOS.BHCI    2592
-#> 26    2018        WOS.IC   20061
-#> 27    2017     WOS.ISSHP   49173
+#> 26    2017     WOS.ISSHP   49173
+#> 27    2018        WOS.IC   20061
 #> 28    2017      WOS.AHCI  121615
-#> 29    2018      WOS.ESCI      35
-#> 30    2015      WOS.ESCI   20948
+#> 29    2015      WOS.ESCI   20948
+#> 30    2018      WOS.ESCI      35
 #> 31    2014       WOS.SCI 1830906
 #> 32    2016      WOS.SSCI  318864
-#> 33    2016      WOS.BHCI   15297
+#> 33    2015     WOS.ISSHP   51599
 #> 34    2015      WOS.AHCI  124350
 #> 35    2015      WOS.SSCI  294228
-#> 36    2014      WOS.BSCI    7818
-#> 37    2015     WOS.ISSHP   51599
-#> 38    2016      WOS.AHCI  122364
-#> 39    2014     WOS.ISSHP   43251
+#> 36    2016      WOS.AHCI  122364
+#> 37    2016      WOS.BHCI   15297
+#> 38    2014     WOS.ISSHP   43251
+#> 39    2014      WOS.BSCI    7818
 #> 40    2014      WOS.BHCI    7352
-#> 41    2018      WOS.AHCI  110112
-#> 42    2017        WOS.IC   20558
-#> 43    2015      WOS.BSCI    8593
-#> 44    2017       WOS.CCR    8735
-#> 45    2015      WOS.BHCI   13015
+#> 41    2017       WOS.CCR    8735
+#> 42    2018      WOS.AHCI  110112
+#> 43    2017        WOS.IC   20558
+#> 44    2015      WOS.BHCI   13015
+#> 45    2015      WOS.BSCI    8593
 #> 46    2015       WOS.SCI 1885625
-#> 47    2014      WOS.AHCI  124155
+#> 47    2018      WOS.BHCI     575
 #> 48    2014        WOS.IC   20623
-#> 49    2018      WOS.BHCI     575
+#> 49    2014      WOS.AHCI  124155
 #> 50    2014      WOS.ESCI     347
 ```
+
+### Recommended readings
+
+  - R Markdown: The Definitive Guide.
+    <https://bookdown.org/yihui/rmarkdown/>

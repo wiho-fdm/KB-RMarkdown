@@ -1,5 +1,5 @@
 ---
-output: github_document
+output: bookdown::html_document2
 ---
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -12,10 +12,52 @@ knitr::opts_chunk$set(
 )
 ```
 
+### Learning Objectives
+
+You will learn how to:
+
+- setup a database connection to WoS-KB with R
+- use SQL statements in R Markdown
+- assign the results of the SQL query to an R object as a data frame
+- store results into your KB table space
+
 ### Prerequisites
 
-- Start your VPN connection
-- Keep your database credentials safe by storing it in an `.Renviron`  file 
+#### Required packages and dependencies
+
+Unfortunately, the KB documentation about how to access the WoS-KB is a bit outdated. Here, we follow the advice from the DZHW Office and connect to the WoS-KB using the following packages
+
+```r
+install.packages(c("RJDBC", "rJava", "DBI"))
+```
+
+In order to connect to the database, you'll need a database driver. You'll find it here:
+
+https://github.com/wiho-fdm/KB-RMarkdown/blob/master/inst/jdbc_driver/ojdbc8.jar
+
+Please download the file `ojdbc8.jar` and put it in the folder `inst/jdbc_driver`
+
+*Some users report frustrations with rJava. An alternative approach would be using an ODBC driver. Here's a brief documentation <https://db.rstudio.com/databases/oracle/>*
+
+We will also use dplyr for analysis
+
+```r
+install.packages("dplyr")
+```
+
+and, of course, the `rmarkdown` package.
+
+```r
+install.packages("rmarkdown")
+```
+
+#### VPN tunnel to FIZ Karlsruhe
+
+Start your VPN connection. Without it, no access to the WoS-KB is possible. 
+
+#### Database credentials 
+
+Keep your database credentials safe by storing it in an `.Renviron`  file 
 
 ```r
 file.edit("~/.Renviron")
@@ -32,8 +74,13 @@ Restart R.
 
 ### Connect to WOS-KB
 
-```{r setup, echo = FALSE}
-require(tidyverse)
+You first need to establish a connection to the database by
+
+- launching a Java session
+- defining where the database driver is stored
+- telling the location of the database and your loging credentials safely stored in your `.Renviron` file
+
+```{r setup}
 require(RJDBC)
 require(rJava)
 .jinit()
@@ -49,6 +96,10 @@ jdbcConnection <-
 ```
 
 ### Query WOS-KB with SQL
+
+You can make use of this connection in a sql chunk via the connection option.
+
+
 
 ```{sql connection=jdbcConnection}
 SELECT *
@@ -83,4 +134,10 @@ select
 ```{r}
 yearly_collections
 ```
+
+### Recommended readings
+
+- R Markdown: The Definitive Guide. <https://bookdown.org/yihui/rmarkdown/>
+
+
 

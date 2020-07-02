@@ -1,5 +1,5 @@
 ---
-output: bookdown::html_document2
+output: github_document
 ---
 
 ```{r, echo = FALSE, message = FALSE, warning = FALSE}
@@ -19,13 +19,12 @@ You will learn how to:
 - setup a database connection to WoS-KB with R
 - use SQL statements in R Markdown
 - assign the results of the SQL query to an R object as a data frame
-- store results into your KB table space
 
 ### Prerequisites
 
 #### Required packages and dependencies
 
-Unfortunately, the KB documentation about how to access the WoS-KB is a bit outdated. Here, we follow the advice from the DZHW Office and connect to the WoS-KB using the following packages
+Unfortunately, the KB documentation about how to access the WoS-KB is a bit outdated. Here, we follow the advice from Paul Donner (DZHW) and connect to the WoS-KB using the following packages
 
 ```r
 install.packages(c("RJDBC", "rJava", "DBI"))
@@ -45,7 +44,7 @@ We will also use dplyr for analysis
 install.packages("dplyr")
 ```
 
-and, of course, the `rmarkdown` package.
+and, of course, the rmarkdown package.
 
 ```r
 install.packages("rmarkdown")
@@ -99,17 +98,33 @@ jdbcConnection <-
 
 You can make use of this connection in a sql chunk via the connection option.
 
+`````markdown
+`r ''````{sql connection=jdbcConnection}
+SELECT * FROM wos_b_2019.items
+LIMIT 10
+```
+`````
 
+Real-life example 
 
 ```{sql connection=jdbcConnection}
-SELECT *
-FROM wos_b_2019.items
+SELECT DOI, UT_EID, PUBYEAR, D_REF_CNT
+FROM wos_b_2019.items 
 WHERE wos_b_2019.items.ut_eid IN ('000389110200022', '000372645900002', '000400754000138')
 ```
 
+By default, up to 10 rows will be printed.
+
 ### Store query results as R object
 
-Using knitr chunk option `output.var`
+The SQL results can be also stored in an R dataframe using the knitr chunk option `output.var`. 
+
+````markdown
+`r ''````{sql, connection=jdbcConnection, output.var="my_kb_df"}
+SELECT * FROM wos_b_2019.items
+LIMIT 10
+```
+````
 
 ```{sql, connection=jdbcConnection, output.var="yearly_collections"}
 select
@@ -120,20 +135,34 @@ select
         wos_b_2019.items                                            
     inner join
         wos_b_2019.databasecollection                                                                                          
-            on wos_b_2019.databasecollection.fk_items =  wos_b_2019.items.pk_items    
+            on wos_b_2019.databasecollection.fk_items =  wos_b_2019.items.pk_items
     where
     wos_b_2019.items.pubyear in (
-            2014, 2015, 2016, 2017, 2018                                                   
+            2014, 2015, 2016, 2017, 2018     
         )                                                  
     group by
         wos_b_2019.items.pubyear,
         wos_b_2019.databasecollection.edition_value
 ```
 
+Inspect `yearly_collections`
 
 ```{r}
-yearly_collections
+library(dplyr)
+dplyr::glimpse(yearly_collections)
 ```
+
+Assigning the results of a SQL query to an R data frame allows to further manipulate and analyse the data in R
+
+```{r}
+yearly_collections %>%
+  group_by(EDITION_VALUE) %>%
+  summarise(n = sum(PUBS),
+            ylr_mean = mean(PUBS)
+) %>%
+  arrange(-n)
+```
+
 
 ### Recommended readings
 

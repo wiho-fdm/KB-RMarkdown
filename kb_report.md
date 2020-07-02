@@ -6,14 +6,13 @@ You will learn how to:
   - setup a database connection to WoS-KB with R
   - use SQL statements in R Markdown
   - assign the results of the SQL query to an R object as a data frame
-  - store results into your KB table space
 
 ### Prerequisites
 
 #### Required packages and dependencies
 
 Unfortunately, the KB documentation about how to access the WoS-KB is a
-bit outdated. Here, we follow the advice from the DZHW Office and
+bit outdated. Here, we follow the advice from Paul Donner (DZHW) and
 connect to the WoS-KB using the following packages
 
 ``` r
@@ -38,7 +37,7 @@ We will also use dplyr for analysis
 install.packages("dplyr")
 ```
 
-and, of course, the `rmarkdown` package.
+and, of course, the rmarkdown package.
 
 ``` r
 install.packages("rmarkdown")
@@ -66,8 +65,16 @@ Restart R.
 
 ### Connect to WOS-KB
 
+You first need to establish a connection to the database by
+
+  - launching a Java session
+  - defining where the database driver is stored
+  - telling the location of the database and your loging credentials
+    safely stored in your `.Renviron` file
+
+<!-- end list -->
+
 ``` r
-require(dplyr)
 require(RJDBC)
 require(rJava)
 .jinit()
@@ -84,27 +91,49 @@ jdbcConnection <-
 
 ### Query WOS-KB with SQL
 
+You can make use of this connection in a sql chunk via the connection
+option.
+
+```` markdown
+```{sql connection=jdbcConnection}
+SELECT * FROM wos_b_2019.items
+LIMIT 10
+```
+````
+
+Real-life example
+
 ``` sql
-SELECT *
-FROM wos_b_2019.items
+SELECT DOI, UT_EID, PUBYEAR, D_REF_CNT
+FROM wos_b_2019.items 
 WHERE wos_b_2019.items.ut_eid IN ('000389110200022', '000372645900002', '000400754000138')
 ```
 
 <div class="knitsql-table">
 
-|   PK\_ITEMS | FK\_ISSUES | FK\_SOURCES | UT\_EID         | T9\_SGR | DOI                          | PII | ARTICLE\_TITLE                                                                       | ARTICLE\_TITLE\_EN | FIRSTPAGE | LASTPAGE | PAGE\_CNT | PUBYEAR | PUBTYPE | DOCTYPE | D\_AUTHOR\_CNT | D\_REF\_CNT | D\_SOURCE\_REF\_CNT | D\_COUNTRY\_CNT | D\_INST\_FULL\_CNT | ETAL | D\_ORGA1\_CNT |
-| ----------: | ---------: | ----------: | :-------------- | :------ | :--------------------------- | :-- | :----------------------------------------------------------------------------------- | :----------------- | :-------- | :------- | :-------- | ------: | :------ | :------ | -------------: | ----------: | ------------------: | --------------: | -----------------: | :--- | ------------: |
-| 20618653399 |      92097 |      109001 | 000372645900002 | NA      | 10.1109/TIE.2015.2499252     | NA  | Application of Calorimetric Method for Loss Measurement of a SynRM Drive System      | NA                 | 2005      | 2015     | 11        |    2016 | Journal | Article |              7 |          33 |                  19 |               2 |                  4 | NA   |             4 |
-| 15594996565 |    2443136 |       50261 | 000389110200022 | NA      | 10.6018/analesps.33.1.256911 | NA  | Adaptation into European Spanish of the Automated Working Memory Test Battery (AWMA) | NA                 | 188       | 195      | 8         |    2017 | Journal | Article |              8 |          40 |                  26 |               2 |                  4 | NA   |             3 |
-| 10388050883 |    1561580 |       53961 | 000400754000138 | NA      | 10.1051/0004-6361/201630260  | NA  | Surface-effect corrections for oscillation frequencies of evolved stars              | NA                 | NA        | NA       | 13        |    2017 | Journal | Article |              2 |          54 |                  46 |               3 |                  4 | NA   |             4 |
+| DOI                          | UT\_EID         | PUBYEAR | D\_REF\_CNT |
+| :--------------------------- | :-------------- | ------: | ----------: |
+| 10.1109/TIE.2015.2499252     | 000372645900002 |    2016 |          33 |
+| 10.6018/analesps.33.1.256911 | 000389110200022 |    2017 |          40 |
+| 10.1051/0004-6361/201630260  | 000400754000138 |    2017 |          54 |
 
 3 records
 
 </div>
 
+By default, up to 10 rows will be printed.
+
 ### Store query results as R object
 
-Using knitr chunk option `output.var`
+The SQL results can be also stored in an R dataframe using the knitr
+chunk option `output.var`.
+
+```` markdown
+```{sql, connection=jdbcConnection, output.var="my_kb_df"}
+SELECT * FROM wos_b_2019.items
+LIMIT 10
+```
+````
 
 ``` sql
 select
@@ -115,69 +144,51 @@ select
         wos_b_2019.items                                            
     inner join
         wos_b_2019.databasecollection                                                                                          
-            on wos_b_2019.databasecollection.fk_items =  wos_b_2019.items.pk_items    
+            on wos_b_2019.databasecollection.fk_items =  wos_b_2019.items.pk_items
     where
     wos_b_2019.items.pubyear in (
-            2014, 2015, 2016, 2017, 2018                                                   
+            2014, 2015, 2016, 2017, 2018     
         )                                                  
     group by
         wos_b_2019.items.pubyear,
         wos_b_2019.databasecollection.edition_value
 ```
 
+Inspect `yearly_collections`
+
 ``` r
-yearly_collections
-#>    PUBYEAR EDITION_VALUE    PUBS
-#> 1     2018       WOS.SCI 2054149
-#> 2     2018      WOS.ISTP  440967
-#> 3     2016      WOS.ISTP  571407
-#> 4     2018     WOS.ISSHP   21160
-#> 5     2014      WOS.ISTP  515827
-#> 6     2018      WOS.BSCI    4039
-#> 7     2016      WOS.ESCI  101820
-#> 8     2017      WOS.SSCI  331083
-#> 9     2016       WOS.SCI 1966278
-#> 10    2017      WOS.ISTP  587904
-#> 11    2017       WOS.SCI 2007069
-#> 12    2014      WOS.SSCI  281326
-#> 13    2017      WOS.BSCI    6239
-#> 14    2015       WOS.CCR    8338
-#> 15    2016      WOS.BSCI   16744
-#> 16    2018      WOS.SSCI  352397
-#> 17    2018       WOS.CCR    8627
-#> 18    2014       WOS.CCR    8486
-#> 19    2015        WOS.IC   20586
-#> 20    2017      WOS.ESCI   66070
-#> 21    2016     WOS.ISSHP   57583
-#> 22    2016        WOS.IC   20772
-#> 23    2016       WOS.CCR    8619
-#> 24    2015      WOS.ISTP  532546
-#> 25    2017      WOS.BHCI    2592
-#> 26    2017     WOS.ISSHP   49173
-#> 27    2018        WOS.IC   20061
-#> 28    2017      WOS.AHCI  121615
-#> 29    2015      WOS.ESCI   20948
-#> 30    2018      WOS.ESCI      35
-#> 31    2014       WOS.SCI 1830906
-#> 32    2016      WOS.SSCI  318864
-#> 33    2015     WOS.ISSHP   51599
-#> 34    2015      WOS.AHCI  124350
-#> 35    2015      WOS.SSCI  294228
-#> 36    2016      WOS.AHCI  122364
-#> 37    2016      WOS.BHCI   15297
-#> 38    2014     WOS.ISSHP   43251
-#> 39    2014      WOS.BSCI    7818
-#> 40    2014      WOS.BHCI    7352
-#> 41    2017       WOS.CCR    8735
-#> 42    2018      WOS.AHCI  110112
-#> 43    2017        WOS.IC   20558
-#> 44    2015      WOS.BHCI   13015
-#> 45    2015      WOS.BSCI    8593
-#> 46    2015       WOS.SCI 1885625
-#> 47    2018      WOS.BHCI     575
-#> 48    2014        WOS.IC   20623
-#> 49    2014      WOS.AHCI  124155
-#> 50    2014      WOS.ESCI     347
+library(dplyr)
+dplyr::glimpse(yearly_collections)
+#> Rows: 50
+#> Columns: 3
+#> $ PUBYEAR       <dbl> 2018, 2016, 2018, 2018, 2014, 2018, 2016, 2017, 2017, 2…
+#> $ EDITION_VALUE <chr> "WOS.SCI", "WOS.ISTP", "WOS.ISTP", "WOS.BSCI", "WOS.IST…
+#> $ PUBS          <dbl> 2054149, 571407, 440967, 4039, 515827, 21160, 101820, 2…
+```
+
+Assigning the results of a SQL query to an R data frame allows to
+further manipulate and analyse the data in R
+
+``` r
+yearly_collections %>%
+  group_by(EDITION_VALUE) %>%
+  summarise(n = sum(PUBS),
+            ylr_mean = mean(PUBS)
+) %>%
+  arrange(-n)
+#> # A tibble: 10 x 3
+#>    EDITION_VALUE       n ylr_mean
+#>    <chr>           <dbl>    <dbl>
+#>  1 WOS.SCI       9744027 1948805.
+#>  2 WOS.ISTP      2648651  529730.
+#>  3 WOS.SSCI      1577898  315580.
+#>  4 WOS.AHCI       602596  120519.
+#>  5 WOS.ISSHP      222766   44553.
+#>  6 WOS.ESCI       189220   37844 
+#>  7 WOS.IC         102600   20520 
+#>  8 WOS.BSCI        43433    8687.
+#>  9 WOS.CCR         42805    8561 
+#> 10 WOS.BHCI        38831    7766.
 ```
 
 ### Recommended readings
